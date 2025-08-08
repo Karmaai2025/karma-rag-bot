@@ -1,24 +1,26 @@
 import sys
 import asyncio
 
+# Windows-specific asyncio fix
 if sys.platform.startswith("win"):
-    try :
+    try:
         asyncio.get_event_loop()
     except RuntimeError:
         asyncio.set_event_loop(asyncio.new_event_loop())
 
-import google.generativeai as genai
 from langchain_community.vectorstores import FAISS
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 
-# Configure Gemini API
-genai.configure(api_key="AIzaSyDwv_96yoBnczeNSWLbHSBCTPQ6gbkMVLM")
+# Google API key
+GOOGLE_API_KEY = "AIzaSyDwv_96yoBnczeNSWLbHSBCTPQ6gbkMVLM"
 
-# Load vectorstore
+# Set up embeddings
 embedding = GoogleGenerativeAIEmbeddings(
     model="models/embedding-001",
-    google_api_key="AIzaSyDwv_96yoBnczeNSWLbHSBCTPQ6gbkMVLM"
+    google_api_key=GOOGLE_API_KEY
 )
+
+# Load FAISS vectorstore
 vectorstore = FAISS.load_local(
     "karma_index",
     embedding,
@@ -26,27 +28,33 @@ vectorstore = FAISS.load_local(
 )
 retriever = vectorstore.as_retriever()
 
-# Gemini model
-model = genai.GenerativeModel("models/gemini-1.5-pro-latest")
+# Gemini via LangChain
+llm = ChatGoogleGenerativeAI(
+    model="gemini-pro",
+    temperature=0.7,
+    google_api_key=GOOGLE_API_KEY,
+    convert_system_message_to_human=True
+)
 
+# Answer generation
 def generate_answer(question: str, is_logged_in: bool = False, username: str = None) -> str:
     docs = retriever.get_relevant_documents(question)
     context = "\n\n".join([doc.page_content for doc in docs])
 
     prompt = f"""Use the context below to answer the question as helpfully and accurately as possible:
 
-    CONTEXT:
-    {context}
+CONTEXT:
+{context}
 
-    QUESTION:
-    {question}
+QUESTION:
+{question}
 
-    Only answer from the context. Be clear and friendly."""
+Only answer from the context. Be clear and friendly."""
 
-    response = model.generate_content(prompt)
-    answer = response.text.strip()
+    response = llm.invoke(prompt)
+    answer = response.content.strip()
 
-    # Add post-login links if user is logged in
+    # Optional post-login additions
     if is_logged_in:
         links = {
             "hotdeals": "https://yourdomain.com/hotdeals",
@@ -58,13 +66,12 @@ def generate_answer(question: str, is_logged_in: bool = False, username: str = N
             if keyword in lower_q:
                 answer += f"\n\nYou can check more information about {keyword} [here]({url})."
 
-        # Example: user-specific message
         if username:
             answer += f"\n\n(You are logged in as {username}.)"
 
     return answer
 
-# Example for CLI testing
+# Optional CLI testing
 if __name__ == "__main__":
     while True:
         q = input("\nAsk a question (or type 'exit'): ")
