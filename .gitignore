@@ -1,0 +1,38 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*.so
+
+# Virtual environment
+.venv/
+venv/
+ENV/
+env/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+
+# Streamlit & FastAPI
+.streamlit/
+*.db
+
+# Secret or config files
+.env
+*.key
+*.pem
+*.crt
+
+# IDE/editor settings
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Render or packaging
+render.yaml
+build/
+dist/

@@ -1,0 +1,5 @@
+google-generativeai
+langchain
+langchain-community
+tkinter
+PyQt5
